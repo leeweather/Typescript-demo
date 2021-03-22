@@ -2,6 +2,7 @@ import superagent from 'superagent'
 import cheerio from 'cheerio'
 import fs from 'fs'
 import path from 'path'
+import { Analyzer } from './crowller'
 
 interface CourseInfo {
   title: string
@@ -16,8 +17,8 @@ interface content {
   [propName: number]: CourseInfo[]
 }
 
-class Crowller {
-  private url = 'http://www.dell-lee.com/'
+export default class DellAnalyzer implements Analyzer {
+  private static instance: DellAnalyzer
 
   getCourseInfo(html: string) {
     const $ = cheerio.load(html)
@@ -35,13 +36,7 @@ class Crowller {
     return resultInfo
   }
 
-  async getRawHtml() {
-    const res = await superagent.get(this.url)
-    return res.text
-  }
-
-  generateJsonContent(courseResult: CourseResult) {
-    const filePath = path.resolve(__dirname, '../data/course.json')
+  private generateJsonContent(courseResult: CourseResult, filePath: string) {
     let content: content = {}
     if (fs.existsSync(filePath)) {
       content = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
@@ -50,17 +45,20 @@ class Crowller {
     return content
   }
 
-  async initSpiderProcss() {
-    const filePath = path.resolve(__dirname, '../data/course.json')
-    const html = await this.getRawHtml()
+  public analyzer(html: string, filePath: string) {
     const courseResult = this.getCourseInfo(html)
-    const fileContent = this.generateJsonContent(courseResult)
-    fs.writeFileSync(filePath, JSON.stringify(fileContent))
+    const fileContent = this.generateJsonContent(courseResult, filePath)
+    return JSON.stringify(fileContent)
   }
 
-  constructor() {
-    this.initSpiderProcss()
+  private constructor() {}
+
+  static getAnalyzer() {
+    if (!this.instance) {
+      this.instance = new DellAnalyzer()
+    }
+    return this.instance
   }
 }
 
-const crowller = new Crowller()
+console.log(222)
